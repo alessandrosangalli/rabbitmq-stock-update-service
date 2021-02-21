@@ -1,0 +1,46 @@
+
+version: "3.8"
+services:
+  backend:
+    build: .
+    restart: always
+    command: npm run start:dev
+    volumes:
+      - .:/usr/app/
+      - /usr/app/node_modules
+    ports:
+      - "3000:3000"
+    depends_on: 
+      - rabbitmq
+      - stock-service
+    links:
+      - rabbitmq
+    networks:
+      - app-network
+    environment:
+      - RABBITMQ_QUEUE_NAME=inventory
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_HOST=rabbitmq
+  rabbitmq:
+    image: rabbitmq:3.8-management
+    networks:
+      - app-network
+    ports:
+      - 5672:5672
+      - 15672:15672
+  stock-service:
+    image: deliverymuch/backend-challenge:stock-service
+    networks:
+      - app-network
+    environment:
+      - RABBITMQ_URL=amqp://rabbitmq
+    depends_on:
+      - rabbitmq
+    links:
+      - rabbitmq
+    restart: on-failure
+networks:
+  app-network:
+    driver: bridge
